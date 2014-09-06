@@ -11,6 +11,8 @@ Function_Header:                       ; Where Functions are
     db 'BEGIN_FUNCTIONS',0xDEADBEEF,0  ; Magic numbers help identify
 Variable_Header:                       ; Where Variables are
     db 'BEGIN_VARIABLES',0xDEADBEEF,0  ;
+Class_Footer:                          ; End of Class
+    db 'END_CLASS',0xDEADBEEF,0        ; Magic variable
 ;--------------------------------------;
        
 ;-----[ strcmp ]--------;
@@ -43,12 +45,14 @@ ret                     ; return
 ;-----[ strlen ]--------;
 strlen:                 ; String Length
 push esi                ; save esi
+pop eax                 ; save eax
 mov ecx, 0              ; make count 0
 .loop:                  ; loopback
 lodsb                   ; esi -> eax
 inc ecx                 ; increment count
 cmp al, 0               ; compare to null terminator
 jne .loop               ; jump back to loop
+pop eax                 ; restore eax
 pop esi                 ; restore esi
 ret                     ; return
 ;-----------------------;
@@ -103,3 +107,60 @@ add esi, ecx            ; Get to pointer
 call [esi]              ; Call function!
 ret                     ; All Done, return
 ;-----------------------;
+
+;-------[ LOR ]---------;
+; esi - Variable name   ;
+; ebp - Object Location ;
+;-----------------------;
+_find_variable:         ; Find a variable
+mov eax, esi            ; Save Variable name
+mov ebp, esi            ; Store object in esi
+.retry:                 ; Loopback recurse
+add esi, 4              ; Skip class pointer
+mov edx, [esi]          ;  
+mov edi, Variable_Header; look for Variable header
+call strcmp             ; This *should* be right after pointer
+jne .error              ; Somthing went wrong, error out.
+call strlen             ; get length of string
+add esi, ecx            ; offset source to after string.
+mov edi, eax            ; restore variable name
+mov ebx, Class_Footer   ; Know when to end.
+.loop:                  ; Loop!
+xchg ebx, edi           ; Swap in the footer
+call strcmp             ; Check to see if we hit it
+je .parent              ; If we did, go up to parent
+xchg ebx, edi           ; Swap back
+call strcmp             ; Did we hit the right variable?
+je .done                ; YAY :D
+call strlen             ; What's the length again?
+add esi, ecx            ; add that to the source
+add esi, 4              ; Skip Variable
+jmp .loop               ; Try again
+;;;;;;;;;;;;;;;;;;;;;;;;;
+.error:                 ; Uhoh
+ret                     ; %TODO% implement error handling
+;;;;;;;;;;;;;;;;;;;;;;;;;
+.parent:                ; Couldn't find variable here, look at parent
+cmp edx, 0              ; Check to see if we're an orphan
+je .error               ; If we are, the variable doesn't exist
+mov esi, [edx]          ; move parent pointer into source
+jmp .retry              ; Try again
+;;;;;;;;;;;;;;;;;;;;;;;;;
+.done:                  ; Found the variable name
+call strlen             ; Add length!
+add esi, ecx            ; This is fun! (ha.)
+mov eax, [esi]          ; Move the value of the register into eax
+mov ebx, esp            ; Get stack pointer
+add ebx, 40             ; 8 GPR's + Call to this function
+mov [ebx], eax          ; Store eax in the stack.
+ret                     ; Cave Johnson, We're Done here.
+;-----------------------;
+
+
+
+;"Science isn't about WHY. It's about WHY NOT. Why is so much of our science 
+; dangerous? Why not marry safe science if you love it so much. In fact, 
+; why not invent a special safety door that won't hit you on the butt 
+; on the way out, because you are fired."   
+
+                     
