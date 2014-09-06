@@ -17,11 +17,13 @@ Variable_Header:                       ; Where Variables are
 Class_Footer:                          ; End of Class
     db 'END_CLASS'                     ; :D
     db 0xDE,0xAD,0xBE,0xEF,0           ; Magic variable
+INIT_LABEL:                            ;
+    db 'init',0                        ; Init!
 ;--------------------------------------;
        
-[global call_class_routine]
-[global find_variable]
-[global set_variable]
+[global _call_class_routine]
+[global _find_variable]
+[global _set_variable]
 [global main]
 [extern start]
 
@@ -62,7 +64,7 @@ ret                     ; return
 ;-----[ strlen ]--------;
 strlen:                 ; String Length
 push esi                ; save esi
-pop eax                 ; save eax
+push eax                ; save eax
 mov ecx, 0              ; make count 0
 .loop:                  ; loopback
 lodsb                   ; esi -> eax
@@ -71,6 +73,17 @@ cmp al, 0               ; compare to null terminator
 jne .loop               ; jump back to loop
 pop eax                 ; restore eax
 pop esi                 ; restore esi
+ret                     ; return
+;-----------------------;
+
+;---[ memcpy ]----------; 
+memmove:                ; copy specified amount of bytes from esi to edi
+pusha                   ; Store all registers. We use quite a few
+.loop:                  ; loop until out of bytes
+lodsb                   ; esi -> al
+stosb                   ; al  -> edi
+loop .loop              ; loop
+popa                    ; restore
 ret                     ; return
 ;-----------------------;
 
@@ -87,7 +100,7 @@ call strcmp             ; Call String Compare to check
 jne .error              ; Uhoh!
 call strlen             ; Get length of object name
 add esi, ecx            ; Add string length.
-mov esi, edx            ; Pointer for parent, Save for later
+mov edx, [esi]          ; Pointer for parent, Save for later
 add esi, 4              ; Get to the Function Header.
 mov edi, Function_Header; Function header. For sanity.
 call strcmp             ; Check to see if we have functions here.
@@ -134,7 +147,8 @@ mov eax, esi            ; Save Variable name
 mov ebp, esi            ; Store object in esi
 .retry:                 ; Loopback recurse
 add esi, 4              ; Skip class pointer
-mov edx, [esi]          ;  
+mov edx, [esi]          ; add parent to edx for later
+add esi, 4              ; Skip that now.
 mov edi, Variable_Header; look for Variable header
 call strcmp             ; This *should* be right after pointer
 jne .error              ; Somthing went wrong, error out.
@@ -182,7 +196,8 @@ mov eax, esi            ; Save Variable name
 mov ebp, esi            ; Store object in esi
 .retry:                 ; Loopback recurse
 add esi, 4              ; Skip class pointer
-mov edx, [esi]          ;  
+mov edx, [esi]          ; Put parent in edx for later
+add esi, 4              ; Skip Parent
 mov edi, Variable_Header; look for Variable header
 call strcmp             ; This *should* be right after pointer
 jne .error              ; Somthing went wrong, error out.
@@ -224,4 +239,73 @@ ret                     ; Cave Johnson, We're done here.
 ; why not invent a special safety door that won't hit you on the butt 
 ; on the way out, because you are fired."   
 
-                     
+;-----[ New ]-----------;
+; esi - Class           ;
+; ebp - Object pointer  ;
+;-----------------------;
+_new_object:            ; Allocate Space for a new object, then initialize it.
+pusha                   ; Save all Registers
+mov ebx, esi            ; Save class for later 
+mov eax, 0              ; Clear eax. We're gonna use it to store var count.
+mov edi, Class_Header   ; Make sure that it's really a class.
+call strcmp             ; Compare the two strings
+jne .error              ; This isn't a Class definition, fail!
+call strlen             ; Get length of header
+add esi, ecx            ; Add that to source to skip to parent
+mov edx, [esi]          ; Save Superclass for later. We're gonna need it.
+add esi, 4              ; Move to the next section
+mov edi, Variable_Header; We're gonna skip over the functions, we don't need em
+;;;;;;;;;;;;;;;;;;;;;;;;;
+.loopa:                 ; First loop, Skip to the variables by skipping over strings
+call strlen             ; Get Lenght of string to null pointer.
+add esi, ecx            ; Skip string
+call strcmp             ; Check to see if we hit variables yet
+jne .loopa              ; if not, keep going till we do
+mov edi, Class_Footer   ; Class footer string so we know when we've hit the end.
+;;;;;;;;;;;;;;;;;;;;;;;;;
+.loopb:                 ; At this point we've hit variables, now we have to count how many we have
+call strcmp             ; Compare to footer, if so, no variables
+je .next                ; On to next step
+call strlen             ; Get length of var name
+add ecx, 4              ; Add on the var itself.
+add esi, ecx            ; Move on to the next one
+add eax, ecx            ; Add it to running count of bytes to allocate
+jmp .loopb              ; Jump back to loop
+;;;;;;;;;;;;;;;;;;;;;;;;;
+.next:                  ; At this point, we've hit the object footer.
+call strlen             ; Call String length on Class_Footer
+add eax, ecx            ; Add Footer to length
+add esi, ecx            ; Advance esi to account for this.
+mov edi, Variable_Header; Need length
+call strlen             ; :)
+add eax, ecx            ; Add header to length to malloc
+add eax, 8              ; Class Pointer & Parent Pointer
+push eax                ; Push the amount of bytes to allocate for malloc
+call malloc             ; Oh noes, C code! (There was really no other way)
+mov [ebp], eax          ; Store the object proper.
+mov ebp, eax            ; Move to pointed address
+pop eax                 ; Restore count
+mov [ebp], ebx          ; Store the class pointer
+add ebp, 8              ; go to the next section
+sub eax, 8              ; ok, 8 less bytes to memcopy.
+sub esi, eax            ; Rewind source for copy
+mov ecx, eax            ; Set up count
+mov edi, ebp            ; put object in destination
+call memcpy             ; Call Memory Copy over eax bytes
+sub ebp, 4              ; Back up to where the parent pointer should be
+cmp edx, 0              ; Check to see if we have a parent
+je .done                ; All done! :D
+mov esi, edx            ; Put parent in source register
+call _new_object        ; Recurse!
+jmp .donewithparent     ;
+.done:                  ;
+mov [ebp], 0            ; No parent left
+.donewithparent:        ;
+sub ebp, 8              ; hop back up to top of object
+mov esi, _INIT_LABEL    ; Init label (Literally "init")
+call _call_class_routine; Run the init
+popa                    ; Restore Registers
+ret                     ; Return
+;-----------------------;
+
+
