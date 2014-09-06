@@ -1,0 +1,16 @@
+#!/bin/sh
+# First we run through the preprocessor
+
+if [[ $1 == "-o" ]]
+then
+    asparse $2
+    nasm -g -felf $2.int
+    rm $2.int
+else
+    asparse $1
+    nasm -g -felf $1.int -o $1.o
+    rm $1.int
+    aslink $1.o
+    rm $1.o
+fi
+
