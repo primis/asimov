@@ -9,13 +9,13 @@ vLK
 All The Organizers (We <3 you guys)
 
 Syntax:
-new - create new object from class. Usage:
+* new - create new object from class. Usage:
 	new [object], class
-del - Deallocate object from memory. Usage:
+* del - Deallocate object from memory. Usage:
 	del [object]
-lor - Load register with a variable from an object where EDI = object pointer. Usage:
+* lor - Load register with a variable from an object where EDI = object pointer. Usage:
 	lor eax, Variable
-str - Store register into a variable in an object where EDI = object pointer. Usage:
+* str - Store register into a variable in an object where EDI = object pointer. Usage:
 	str Variable, eax
-ccr - Call Class Routine. Run a routine that exists within a class where EDI = object pointer. Usage:
+* ccr - Call Class Routine. Run a routine that exists within a class where EDI = object pointer. Usage:
 	ccr Function
