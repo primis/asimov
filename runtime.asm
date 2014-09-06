@@ -19,6 +19,19 @@ Class_Footer:                          ; End of Class
     db 0xDE,0xAD,0xBE,0xEF,0           ; Magic variable
 ;--------------------------------------;
        
+[global call_class_routine]
+[global find_variable]
+[global set_variable]
+[global main]
+[extern start]
+
+
+;-----[ Entry Point ]---;
+main:                   ; C Runtime requires a main
+call start              ; Call The start of the program
+ret                     ; Return to OS
+;=======================;
+
 ;-----[ strcmp ]--------;
 strcmp:                 ; Compare Two Strings.
 push esi                ; Source String
@@ -160,7 +173,51 @@ mov [ebx], eax          ; Store eax in the stack.
 ret                     ; Cave Johnson, We're Done here.
 ;-----------------------;
 
-
+;-------[ STR ]---------;
+; esi - Variable name   ;
+; ebp - Object Location ;
+;-----------------------;
+_store_variable:        ; Store a variable
+mov eax, esi            ; Save Variable name
+mov ebp, esi            ; Store object in esi
+.retry:                 ; Loopback recurse
+add esi, 4              ; Skip class pointer
+mov edx, [esi]          ;  
+mov edi, Variable_Header; look for Variable header
+call strcmp             ; This *should* be right after pointer
+jne .error              ; Somthing went wrong, error out.
+call strlen             ; get length of string
+add esi, ecx            ; offset source to after string.
+mov edi, eax            ; restore variable name
+mov ebx, Class_Footer   ; Know when to end.
+.loop:                  ; Loop!
+xchg ebx, edi           ; Swap in the footer
+call strcmp             ; Check to see if we hit it
+je .parent              ; If we did, go up to parent
+xchg ebx, edi           ; Swap back
+call strcmp             ; Did we hit the right variable?
+je .done                ; YAY :D
+call strlen             ; What's the length again?
+add esi, ecx            ; add that to the source
+add esi, 4              ; Skip Variable
+jmp .loop               ; Try again
+;;;;;;;;;;;;;;;;;;;;;;;;;
+.error:                 ; Uhoh
+ret                     ; %TODO% implement error handling
+;;;;;;;;;;;;;;;;;;;;;;;;;
+.parent:                ; Couldn't find variable here, look at parent
+cmp edx, 0              ; Check to see if we're an orphan
+je .error               ; If we are, the variable doesn't exist
+mov esi, [edx]          ; move parent pointer into source
+jmp .retry              ; Try again
+;;;;;;;;;;;;;;;;;;;;;;;;;
+.done:                  ; We're Done!
+call strlen             ; String Length for offset
+add esi, ecx            ; add for actual datum
+pop eax                 ; pop the value off stack
+mov [esi], eax          ; store into the variable
+ret                     ; Cave Johnson, We're done here.
+;=======================;
 
 ;"Science isn't about WHY. It's about WHY NOT. Why is so much of our science 
 ; dangerous? Why not marry safe science if you love it so much. In fact, 
