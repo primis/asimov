@@ -6,13 +6,17 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; DATA                                 ;
 Class_Header:                          ; Is this really a class?
-    db 'BEGIN_CLASS',0xDEADBEEF,0      ; Magic!
+    db 'BEGIN_CLASS'                   ; Header name
+    db 0xDE,0xAD,0xBE,0xEF,0           ; Magic!
 Function_Header:                       ; Where Functions are
-    db 'BEGIN_FUNCTIONS',0xDEADBEEF,0  ; Magic numbers help identify
+    db 'BEGIN_FUNCTIONS'               ; Functions start here
+    db 0xDE,0xAD,0xBE,0xEF,0           ; Magic numbers help identify
 Variable_Header:                       ; Where Variables are
-    db 'BEGIN_VARIABLES',0xDEADBEEF,0  ;
+    db 'BEGIN_VARIABLES'               ; :/
+    db 0xDE, 0xAD,0xBE,0xEF,0          ; :)
 Class_Footer:                          ; End of Class
-    db 'END_CLASS',0xDEADBEEF,0        ; Magic variable
+    db 'END_CLASS'                     ; :D
+    db 0xDE,0xAD,0xBE,0xEF,0           ; Magic variable
 ;--------------------------------------;
        
 ;-----[ strcmp ]--------;
