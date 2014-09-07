@@ -8,15 +8,25 @@ UB Hacking!
 vLK
 All The Organizers (We <3 you guys)
 Class Creation:
+
 %class [name] : Parent
+
 .staticmember: member
+
 %functions
+
 functiona
+
 functionb
+
 %variables
+
 variable1
+
 variable2
+
 %endclass
+
 Syntax:
 * new - create new object from class. Usage:
 	new [object], class
