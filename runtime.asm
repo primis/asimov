@@ -19,13 +19,15 @@ Class_Footer:                          ; End of Class
     db 0xDE,0xAD,0xBE,0xEF,0           ; Magic variable
 INIT_LABEL:                            ;
     db 'init',0                        ; Init!
-DEINIT:                                ;
+DeInit:                                ;
     db 'uninit',0                      ; Disassemble an object
 ;--------------------------------------;
        
 [global _call_class_routine]
 [global _find_variable]
 [global _set_variable]
+[extern malloc]
+[extern free]
 [global main]
 [extern start]
 
@@ -35,6 +37,7 @@ main:                   ; C Runtime requires a main
 call start              ; Call The start of the program
 ret                     ; Return to OS
 ;=======================;
+
 
 ;-----[ strcmp ]--------;
 strcmp:                 ; Compare Two Strings.
@@ -79,7 +82,7 @@ ret                     ; return
 ;-----------------------;
 
 ;---[ memcpy ]----------; 
-memmove:                ; copy specified amount of bytes from esi to edi
+memcpy:                ; copy specified amount of bytes from esi to edi
 pusha                   ; Store all registers. We use quite a few
 .loop:                  ; loop until out of bytes
 lodsb                   ; esi -> al
@@ -140,6 +143,8 @@ call [esi]              ; Call function!
 ret                     ; All Done, return
 ;-----------------------;
 
+
+[global _find_variable]
 ;-------[ LOR ]---------;
 ; esi - Variable name   ;
 ; ebp - Object Location ;
@@ -189,6 +194,8 @@ mov [ebx], eax          ; Store eax in the stack.
 ret                     ; Cave Johnson, We're Done here.
 ;-----------------------;
 
+
+[global _store_variable]
 ;-------[ STR ]---------;
 ; esi - Variable name   ;
 ; ebp - Object Location ;
@@ -241,6 +248,7 @@ ret                     ; Cave Johnson, We're done here.
 ; why not invent a special safety door that won't hit you on the butt 
 ; on the way out, because you are fired."   
 
+[global _new_object]
 ;-----[ New ]-----------;
 ; esi - Class           ;
 ; ebp - Object pointer  ;
@@ -300,11 +308,12 @@ je .done                ; All done! :D
 mov esi, edx            ; Put parent in source register
 call _new_object        ; Recurse!
 jmp .donewithparent     ;
-.done:                  ;
-mov [ebp], 0            ; No parent left
+.done:
+mov eax, 0              ;
+mov [ebp], eax          ; No parent left
 .donewithparent:        ;
 sub ebp, 8              ; hop back up to top of object
-mov esi, _INIT_LABEL    ; Init label (Literally "init")
+mov esi, INIT_LABEL     ; Init label (Literally "init")
 call _call_class_routine; Run the init
 popa                    ; Restore Registers
 ret                     ; Return
@@ -313,20 +322,23 @@ ret                     ; Return
 ret                     ; todo: errror handling
 ;-----------------------;
 
+
+[global _delete_object]
 ;----[ Del ]------------;
 ; ebp - Object          ;
 ;-----------------------;
-_Delete_Object:         ; Deallocates object
+_delete_object:         ; Deallocates object
 mov eax, ebp            ; make a copy
 add eax, 4              ; Get to parent
-mov esi, deinit         ; UnInit
+mov esi, DeInit         ; DeInit Things
 call _call_class_routine; Call UnInit
 push ebp                ;
 call free               ; Call Free
 mov ebp, eax            ; store parent in base object register
-cmp [eax], 0            ; Are we an orphan?
+mov ebx, [eax]
+cmp ebx, 0            ; Are we an orphan?
 je .done                ;
-call _Delete_Object     ; recurse!
+call _delete_object     ; recurse!
 .done:                  ;
 ret                     ; done here
 ;=======================;
