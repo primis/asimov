@@ -19,6 +19,8 @@ Class_Footer:                          ; End of Class
     db 0xDE,0xAD,0xBE,0xEF,0           ; Magic variable
 INIT_LABEL:                            ;
     db 'init',0                        ; Init!
+DEINIT:                                ;
+    db 'uninit',0                      ; Disassemble an object
 ;--------------------------------------;
        
 [global _call_class_routine]
@@ -306,6 +308,25 @@ mov esi, _INIT_LABEL    ; Init label (Literally "init")
 call _call_class_routine; Run the init
 popa                    ; Restore Registers
 ret                     ; Return
+;;;;;;;;;;;;;;;;;;;;;;;;;
+.error:                 ; uhoh
+ret                     ; todo: errror handling
 ;-----------------------;
 
-
+;----[ Del ]------------;
+; ebp - Object          ;
+;-----------------------;
+_Delete_Object:         ; Deallocates object
+mov eax, ebp            ; make a copy
+add eax, 4              ; Get to parent
+mov esi, deinit         ; UnInit
+call _call_class_routine; Call UnInit
+push ebp                ;
+call free               ; Call Free
+mov ebp, eax            ; store parent in base object register
+cmp [eax], 0            ; Are we an orphan?
+je .done                ;
+call _Delete_Object     ; recurse!
+.done:                  ;
+ret                     ; done here
+;=======================;
