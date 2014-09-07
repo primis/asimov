@@ -7,7 +7,7 @@
 
 %class [Pet] : [ASObject]   ; Pets!
 ; Related Data
-.poopString: db "I pooped",10, 0
+.poopString: db "I pooped",10, 0Mhacks IV atten
 .eatString: db "omnomnom",10, 0
 .sleepString: db "zZzZzZz",10, 0
 %functions
@@ -64,6 +64,7 @@ Pet.sleep:
     jmp CommonCall
 Pet.poop
     mov esi, Pet.poopString
+
     jmp CommonCall
 Pet.eat
     mov esi, Pet.eatString

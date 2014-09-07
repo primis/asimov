@@ -3,7 +3,8 @@
 
 if [[ $1 == "-o" ]]
 then
-    asparse $2
+    #aparse $2
+    
     nasm -g -felf $2.int
     rm $2.int
 else
