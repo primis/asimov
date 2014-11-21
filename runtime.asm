@@ -3,10 +3,16 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Runtime that allows objects to       ;
 ; actually run.                        ;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; DATA                                 ;
-Class_Header:                          ; Is this really a class?
-    db 'BEGIN_CLASS'                   ; Header name
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Definitions                                                   ;
+%define CLASS_HEADER db 'BEGIN_CLASS',   0xDE,0xAD,0xBE,0xEF, 0 ; Class Header
+%define FUNC_HEADER db 'BEGIN_FUNCTIONS',0xDE,0xAD,0xBE,0xEF, 0 ; Functions
+%define VAR_HEADER db 'BEGIN_VARIABLES', 0xDE,0xAD,0xBE,0xEF, 0 ; Variables
+%define CLASS_FOOTER db 'END_CLASS',     0xDE,0xAD,0xBE,0xEF, 0 ; Class
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                                       ;
+Class_Header:                          ;
+    db 'BEGIN_CLASS'                   ;
     db 0xDE,0xAD,0xBE,0xEF,0           ; Magic!
 Function_Header:                       ; Where Functions are
     db 'BEGIN_FUNCTIONS'               ; Functions start here
